@@ -35,17 +35,18 @@ List<Game> games = new()
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+var group = app.MapGroup("/games");
 
-app.MapGet("/games", () => games);
+group.MapGet("/", () => games);
 
-app.MapGet("/games/{id}", (int id) =>
+group.MapGet("/{id}", (int id) =>
 {
     Game? game = games.Find(game => game.Id == id);
     if (game == null) return Results.NotFound();
     return Results.Ok(game);
 }).WithName(GetGamesEndpointName);
 
-app.MapPost("/games", (Game game) => 
+group.MapPost("/", (Game game) => 
 {
     game.Id = games.Max(game => game.Id) + 1;
     games.Add(game);
@@ -53,7 +54,7 @@ app.MapPost("/games", (Game game) =>
     return Results.CreatedAtRoute(GetGamesEndpointName, new {id = game.Id}, game);
 });
 
-app.MapPut("/games", (int id, Game updatedGame) => 
+group.MapPut("/{id}", (int id, Game updatedGame) => 
 {
     Game? existingGame = games.Find(game => game.Id == id);
     if (existingGame == null) return Results.NotFound();
@@ -68,7 +69,7 @@ app.MapPut("/games", (int id, Game updatedGame) =>
     return Results.NoContent();
 });
 
-app.MapDelete("/games/{id}", (int id) =>
+group.MapDelete("/{id}", (int id) =>
 {
     Game? game = games.Find(game => game.Id == id);
 
