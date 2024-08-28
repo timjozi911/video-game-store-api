@@ -1,4 +1,5 @@
-﻿using GameStore.Api.models;
+﻿using GameStore.Api.Dtos;
+using GameStore.Api.models;
 using GameStore.Api.Repos;
 
 namespace GameStore.Api.Endpoints;
@@ -11,26 +12,34 @@ public static class GameEndpoints
     {
         var group = routes.MapGroup("/games").WithParameterValidation();
 
-        group.MapGet("/", (IGamesRepo repo) => repo.GetAll());
+        group.MapGet("/", (IGamesRepo repo) => repo.GetAll().Select(game => game.AsDto()));
 
         group.MapGet("/{id}", (IGamesRepo repo, int id) =>
         {
-            Game? game = repo.GetGame(id) ;
-            return game is not null ? Results.Ok(game) : Results.NotFound() ;
+            Game? game = repo.GetGame(id);
+            return game is not null ? Results.Ok(game.AsDto()) : Results.NotFound();
         }).WithName(GetGamesEndpointName);
 
-        group.MapPost("/", (IGamesRepo repo, Game game) =>
+        group.MapPost("/", (IGamesRepo repo, CreateGameDto gameDto) =>
         {
+            Game game = new()
+            {
+                Name = gameDto.Name,
+                Genre = gameDto.Genre,
+                Price = gameDto.Price,
+                ReleaseDate = gameDto.ReleaseDate,
+                ImageUri = gameDto.ImageUri
+            };
+            
             repo.Create(game);
             return Results.CreatedAtRoute(GetGamesEndpointName, new { id = game.Id }, game);
         });
 
-        group.MapPut("/{id}", (IGamesRepo repo, int id, Game updatedGame) =>
+        group.MapPut("/{id}", (IGamesRepo repo, int id, UpdateGameDto updatedGame) =>
         {
-            Game? existingGame = repo.GetGame(id) ;
+            Game? existingGame = repo.GetGame(id);
             if (existingGame == null) return Results.NotFound();
 
-            existingGame.Id = updatedGame.Id;
             existingGame.Name = updatedGame.Name;
             existingGame.Price = updatedGame.Price;
             existingGame.ReleaseDate = updatedGame.ReleaseDate;
