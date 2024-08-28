@@ -2,7 +2,7 @@
 
 namespace GameStore.Api.Repos;
 
-public class InMemoryRepo
+public class InMemoryRepo : IGamesRepo
 {
     readonly private List<Game> games = new()
     {
@@ -40,7 +40,7 @@ public class InMemoryRepo
         return games;
     }
 
-    public Game? GetGame(int id) 
+    public Game? GetGame(int id)
     {
         return games.Find(game => game.Id == id);
     }
@@ -53,7 +53,7 @@ public class InMemoryRepo
 
     public void Update(Game updatedGame)
     {
-        var index = games.FindIndex(game  => game.Id == updatedGame.Id);
+        var index = games.FindIndex(game => game.Id == updatedGame.Id);
         games[index] = updatedGame;
     }
 
