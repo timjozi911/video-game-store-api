@@ -1,4 +1,6 @@
-﻿using GameStore.Api.models;
+﻿using GameStore.Api.Dtos;
+using GameStore.Api.models;
+using GameStore.Api.Repos;
 
 namespace GameStore.Api.Endpoints;
 
@@ -6,78 +8,52 @@ public static class GameEndpoints
 {
     const string GetGamesEndpointName = "GetGame";
 
-    static List<Game> games = new()
-{
-    new Game()
-    {
-        Id = 1,
-        Name = "SF 2",
-        Genre = "fighting",
-        Price = 19.99M,
-        ImageUri = "https://placehold.co/100",
-        ReleaseDate = new DateTime(1991, 2,2),
-    },
-    new Game()
-    {
-        Id = 2,
-        Name = "FF 12",
-        Genre = "role playing",
-        Price = 19.99M,
-        ImageUri = "https://placehold.co/100",
-        ReleaseDate = new DateTime(2010, 9,30),
-    },
-    new Game()
-    {
-        Id = 3,
-        Name = "Fifa 23",
-        Genre = "sport",
-        Price = 69.99M,
-        ImageUri = "https://placehold.co/100",
-        ReleaseDate = new DateTime(2022, 9,27),
-    }
-};
-
     public static RouteGroupBuilder MapGamesEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/games").WithParameterValidation();
 
-        group.MapGet("/", () => games);
+        group.MapGet("/", (IGamesRepo repo) => repo.GetAll().Select(game => game.AsDto()));
 
-        group.MapGet("/{id}", (int id) =>
+        group.MapGet("/{id}", (IGamesRepo repo, int id) =>
         {
-            Game? game = games.Find(game => game.Id == id);
-            if (game == null) return Results.NotFound();
-            return Results.Ok(game);
+            Game? game = repo.GetGame(id);
+            return game is not null ? Results.Ok(game.AsDto()) : Results.NotFound();
         }).WithName(GetGamesEndpointName);
 
-        group.MapPost("/", (Game game) =>
+        group.MapPost("/", (IGamesRepo repo, CreateGameDto gameDto) =>
         {
-            game.Id = games.Max(game => game.Id) + 1;
-            games.Add(game);
-
+            Game game = new()
+            {
+                Name = gameDto.Name,
+                Genre = gameDto.Genre,
+                Price = gameDto.Price,
+                ReleaseDate = gameDto.ReleaseDate,
+                ImageUri = gameDto.ImageUri
+            };
+            
+            repo.Create(game);
             return Results.CreatedAtRoute(GetGamesEndpointName, new { id = game.Id }, game);
         });
 
-        group.MapPut("/{id}", (int id, Game updatedGame) =>
+        group.MapPut("/{id}", (IGamesRepo repo, int id, UpdateGameDto updatedGame) =>
         {
-            Game? existingGame = games.Find(game => game.Id == id);
+            Game? existingGame = repo.GetGame(id);
             if (existingGame == null) return Results.NotFound();
 
-            existingGame.Id = updatedGame.Id;
             existingGame.Name = updatedGame.Name;
             existingGame.Price = updatedGame.Price;
             existingGame.ReleaseDate = updatedGame.ReleaseDate;
             existingGame.ImageUri = updatedGame.ImageUri;
-            games.Add(existingGame);
+            repo.Create(existingGame);
 
             return Results.NoContent();
         });
 
-        group.MapDelete("/{id}", (int id) =>
+        group.MapDelete("/{id}", (IGamesRepo repo, int id) =>
         {
-            Game? game = games.Find(game => game.Id == id);
+            Game? game = repo.GetGame(id);
 
-            if (game is not null) games.Remove(game);
+            if (game is not null) repo.Delete(id);
 
             return Results.NoContent();
         });
